@@ -30,8 +30,8 @@ func Open(vendor string, product string) (Port, error) {
 	return Port(fd), nil
 }
 
-func Write(dev Port, buf []byte) error {
-	n, err := s.Write(int(dev), buf)
+func (fd Port) Write(buf []byte) error {
+	n, err := s.Write(int(fd), buf)
 	if err != nil {
 		return err
 	}
@@ -41,9 +41,9 @@ func Write(dev Port, buf []byte) error {
 	return nil
 }
 
-func Read(dev Port, buf []byte) error {
+func (fd Port) Read(buf []byte) error {
 	for off := 0; off < len(buf); {
-		n, err := s.Read(int(dev), buf[off:])
+		n, err := s.Read(int(fd), buf[off:])
 		if err != nil {
 			return err
 		}
