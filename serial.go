@@ -1,3 +1,6 @@
+/*
+Package usbserial is a simple library for I/O over USB serial devices.
+*/
 package usbserial
 
 import (
@@ -6,8 +9,12 @@ import (
 	"unsafe"
 )
 
+// A Port represents an open USB serial device.
 type Port int
 
+// Open returns a Port for the USB serial device with the given
+// vendor and product identifiers.
+// Its behavior is undefined if more than one such USB device is present.
 func Open(vendor string, product string) (Port, error) {
 	device, err := findUSB(vendor, product)
 	if err != nil {
@@ -30,6 +37,7 @@ func Open(vendor string, product string) (Port, error) {
 	return Port(fd), nil
 }
 
+// Write writes len(buf) bytes from buf to Port.
 func (fd Port) Write(buf []byte) error {
 	n, err := s.Write(int(fd), buf)
 	if err != nil {
@@ -41,6 +49,8 @@ func (fd Port) Write(buf []byte) error {
 	return nil
 }
 
+// Read reads from Port into buf, blocking if necessary
+// until exactly len(buf) bytes have been read.
 func (fd Port) Read(buf []byte) error {
 	for off := 0; off < len(buf); {
 		n, err := s.Read(int(fd), buf[off:])
