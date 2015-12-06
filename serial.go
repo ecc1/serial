@@ -37,6 +37,11 @@ func Open(vendor string, product string) (Port, error) {
 	return Port(fd), nil
 }
 
+// Close closes the given Port.
+func (fd Port) Close() error {
+	return s.Close(int(fd))
+}
+
 // Write writes len(buf) bytes from buf to Port.
 func (fd Port) Write(buf []byte) error {
 	n, err := s.Write(int(fd), buf)
