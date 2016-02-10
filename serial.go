@@ -5,8 +5,9 @@ package usbserial
 
 import (
 	"fmt"
-	s "syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 // A Port represents an open USB serial device.
@@ -22,18 +23,18 @@ func Open(vendor string, product string) (port Port, err error) {
 	if err != nil {
 		return
 	}
-	const openFlags = s.O_NONBLOCK | s.O_NOCTTY | s.O_RDWR
-	port.fd, err = s.Open(device, openFlags, 0)
+	const openFlags = unix.O_NONBLOCK | unix.O_NOCTTY | unix.O_RDWR
+	port.fd, err = unix.Open(device, openFlags, 0)
 	if err != nil {
 		return
 	}
-	speed := uint32(s.B115200)
-	t := s.Termios{
-		Iflag: s.IGNPAR,
-		Cflag: s.CLOCAL | s.CREAD | s.CS8 | speed,
+	speed := uint32(unix.B115200)
+	t := unix.Termios{
+		Iflag: unix.IGNPAR,
+		Cflag: unix.CLOCAL | unix.CREAD | unix.CS8 | speed,
 	}
-	_, _, errno := s.Syscall6(
-		s.SYS_IOCTL, uintptr(port.fd), uintptr(s.TCSETS),
+	_, _, errno := unix.Syscall6(
+		unix.SYS_IOCTL, uintptr(port.fd), uintptr(unix.TCSETS),
 		uintptr(unsafe.Pointer(&t)), 0, 0, 0,
 	)
 	if errno != 0 {
@@ -44,12 +45,12 @@ func Open(vendor string, product string) (port Port, err error) {
 
 // Close closes the given Port.
 func (port Port) Close() error {
-	return s.Close(port.fd)
+	return unix.Close(port.fd)
 }
 
 // Write writes len(buf) bytes from buf to port.
 func (port Port) Write(buf []byte) error {
-	n, err := s.Write(port.fd, buf)
+	n, err := unix.Write(port.fd, buf)
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func (port Port) Write(buf []byte) error {
 // until exactly len(buf) bytes have been read.
 func (port Port) Read(buf []byte) error {
 	for off := 0; off < len(buf); {
-		n, err := s.Read(port.fd, buf[off:])
+		n, err := unix.Read(port.fd, buf[off:])
 		if err != nil {
 			return err
 		}
