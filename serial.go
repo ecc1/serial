@@ -47,7 +47,7 @@ func (port Port) Close() error {
 	return s.Close(port.fd)
 }
 
-// Write writes len(buf) bytes from buf to Port.
+// Write writes len(buf) bytes from buf to port.
 func (port Port) Write(buf []byte) error {
 	n, err := s.Write(port.fd, buf)
 	if err != nil {
@@ -59,7 +59,7 @@ func (port Port) Write(buf []byte) error {
 	return nil
 }
 
-// Read reads from Port into buf, blocking if necessary
+// Read reads from port into buf, blocking if necessary
 // until exactly len(buf) bytes have been read.
 func (port Port) Read(buf []byte) error {
 	for off := 0; off < len(buf); {
