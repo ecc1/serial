@@ -65,7 +65,7 @@ func findUSB(vendor string, product string) (path string, err error) {
 	}
 	filepath.Walk(device, check)
 	if !found {
-		return "", fmt.Errorf("no tty in %q — is the cdc-acm kernel module loaded?", device)
+		return "", fmt.Errorf("no tty in %s: is the cdc-acm kernel module loaded?", device)
 	}
 	return filepath.Join("/dev", tty), nil
 }
