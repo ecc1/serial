@@ -17,7 +17,7 @@ type Port struct {
 
 // Open opens the USB serial device with the given vendor and product identifiers.
 // Its behavior is undefined if more than one such USB device is present.
-func Open(vendor string, product string) (*Port, error) {
+func Open(vendor, product int) (*Port, error) {
 	device, err := findUSB(vendor, product)
 	if err != nil {
 		return nil, err

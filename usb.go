@@ -8,37 +8,33 @@ import (
 	"strings"
 )
 
-// hasProperty tests if the file path/property contains the given value.
-func hasProperty(path string, property string, value string) bool {
-	v, err := ioutil.ReadFile(filepath.Join(path, property))
+// hasID tests if the file path/id contains the given value.
+func hasID(path string, id string, value int) bool {
+	v, err := ioutil.ReadFile(filepath.Join(path, id))
 	if err != nil {
 		return false
 	}
-	if len(v) != 0 && v[len(v)-1] == '\n' {
-		// Compare without trailing '\n'
-		return string(v[:len(v)-1]) == value
-	}
-	return string(v) == value
+	return strings.TrimSpace(string(v)) == fmt.Sprintf("%04x", value)
 }
 
 type DeviceNotFoundError struct {
-	Vendor  string
-	Product string
+	Vendor  int
+	Product int
 }
 
 func (e DeviceNotFoundError) Error() string {
 	return fmt.Sprintf("USB device %s:%s not found", e.Vendor, e.Product)
 }
 
-type TtyNotFoundError string
+type TTYNotFoundError string
 
-func (e TtyNotFoundError) Error() string {
+func (e TTYNotFoundError) Error() string {
 	return fmt.Sprintf("no tty in %s: is the cdc-acm kernel module loaded?", string(e))
 }
 
 // findUSB returns the /dev/tty* path corresponding to the USB serial device
 // with the given vendor and product identifiers.
-func findUSB(vendor string, product string) (path string, err error) {
+func findUSB(vendor, product int) (string, error) {
 	found := false
 	device := ""
 	checkId := func(path string, info os.FileInfo, err error) error {
@@ -48,14 +44,17 @@ func findUSB(vendor string, product string) (path string, err error) {
 		if err != nil {
 			return err
 		}
-		if hasProperty(path, "idVendor", vendor) && hasProperty(path, "idProduct", product) {
+		if hasID(path, "idVendor", vendor) && hasID(path, "idProduct", product) {
 			found = true
 			device = path
 			return filepath.SkipDir
 		}
 		return nil
 	}
-	filepath.Walk("/sys/bus/usb/devices", checkId)
+	err := filepath.Walk("/sys/bus/usb/devices", checkId)
+	if err != nil && err != filepath.SkipDir {
+		return "", err
+	}
 	if !found {
 		return "", DeviceNotFoundError{Vendor: vendor, Product: product}
 	}
@@ -66,7 +65,7 @@ func findUSB(vendor string, product string) (path string, err error) {
 	}
 	found = false
 	tty := ""
-	checkTty := func(path string, info os.FileInfo, err error) error {
+	checkTTY := func(path string, info os.FileInfo, err error) error {
 		if found {
 			return filepath.SkipDir
 		}
@@ -81,9 +80,12 @@ func findUSB(vendor string, product string) (path string, err error) {
 		}
 		return nil
 	}
-	filepath.Walk(device, checkTty)
+	filepath.Walk(device, checkTTY)
+	if err != nil && err != filepath.SkipDir {
+		return "", err
+	}
 	if !found {
-		return "", TtyNotFoundError(device)
+		return "", TTYNotFoundError(device)
 	}
 	return filepath.Join("/dev", tty), nil
 }
