@@ -1,4 +1,4 @@
-package usbserial
+package serial
 
 import (
 	"fmt"
@@ -35,9 +35,9 @@ func (e NotCharDeviceError) Error() string {
 	return fmt.Sprintf("%s is not a character device", string(e))
 }
 
-// findTTY returns the /dev/tty* path corresponding to the USB serial device
+// FindUSB returns the /dev/tty* path corresponding to the USB serial device
 // with the given vendor and product identifiers.
-func findTTY(vendor, product int) (string, error) {
+func FindUSB(vendor, product int) (string, error) {
 	device, err := findUSBDevice(vendor, product)
 	if err != nil {
 		return device, err

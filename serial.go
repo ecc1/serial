@@ -1,41 +1,36 @@
 /*
-Package usbserial is a simple library for I/O over USB serial devices.
+Package serial is a library for I/O over serial devices.
 */
-package usbserial
+package serial
 
 import (
 	"fmt"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
 
-// A Port represents an open USB serial device.
+// A Port represents an open serial device.
 type Port struct {
 	fd int
 }
 
-// Open opens the USB serial device with the given vendor and product identifiers.
-// Its behavior is undefined if more than one such USB device is present.
-func Open(vendor, product int) (*Port, error) {
-	device, err := findTTY(vendor, product)
-	if err != nil {
-		return nil, err
-	}
+// Open opens the specified serial device.
+func Open(device string, speed int) (*Port, error) {
 	const openFlags = unix.O_NONBLOCK | unix.O_NOCTTY | unix.O_RDWR
 	fd, err := unix.Open(device, openFlags, 0)
 	if err != nil {
 		return nil, err
 	}
-	speed := uint32(unix.B115200)
-	t := unix.Termios{
-		Iflag: unix.IGNPAR,
-		Cflag: unix.CLOCAL | unix.CREAD | unix.CS8 | speed,
+	baudrate, err := getBaudRate(speed)
+	if err != nil {
+		return nil, err
 	}
-	_, _, errno := unix.Syscall6(unix.SYS_IOCTL, uintptr(fd),
-		uintptr(unix.TCSETS), uintptr(unsafe.Pointer(&t)), 0, 0, 0)
-	if errno != 0 {
-		return nil, error(errno)
+	err = unix.IoctlSetTermios(fd, unix.TCSETS, &unix.Termios{
+		Iflag: unix.IGNPAR,
+		Cflag: unix.CLOCAL | unix.CREAD | unix.CS8 | baudrate,
+	})
+	if err != nil {
+		return nil, err
 	}
 	err = unix.SetNonblock(fd, false)
 	if err != nil {
@@ -61,11 +56,17 @@ func (port *Port) Write(buf []byte) error {
 	return nil
 }
 
+// ReadAvailable reads available data from port into buf
+// and returns the number of bytes read.
+func (port *Port) ReadAvailable(buf []byte) (int, error) {
+	return unix.Read(port.fd, buf)
+}
+
 // Read reads from port into buf, blocking if necessary
 // until exactly len(buf) bytes have been read.
 func (port *Port) Read(buf []byte) error {
 	for off := 0; off < len(buf); {
-		n, err := unix.Read(port.fd, buf[off:])
+		n, err := port.ReadAvailable(buf[off:])
 		if err != nil {
 			return err
 		}
